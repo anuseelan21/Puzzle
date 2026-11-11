@@ -55,3 +55,5 @@ logs/
 # OS
 Thumbs.db
 .DS_Store
+# Version managed database migrations
+!netlify/database/migrations/**/*.sql

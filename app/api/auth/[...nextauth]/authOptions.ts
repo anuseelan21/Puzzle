@@ -1,8 +1,9 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import prisma from "@/utils/db";
-import { nanoid } from "nanoid";
+import { getDb } from "@/db";
+import { user as users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -15,12 +16,10 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials: any) {
         try {
-          const user = await prisma.user.findFirst({
-            where: {
-              email: credentials.email,
-            },
-          });
-          if (user) {
+          if (!credentials?.email || !credentials?.password) return null;
+          const [user] = await getDb().select().from(users)
+            .where(eq(users.email, credentials.email)).limit(1);
+          if (user?.password) {
             const isPasswordCorrect = await bcrypt.compare(
               credentials.password,
               user.password!
@@ -48,22 +47,12 @@ export const authOptions: NextAuthOptions = {
 
       if (account?.provider === "github" || account?.provider === "google") {
         try {
-          const existingUser = await prisma.user.findFirst({
-            where: {
-              email: user.email!,
-            },
-          });
-
-          if (!existingUser) {
-            await prisma.user.create({
-              data: {
-                id: nanoid(),
-                email: user.email!,
-                role: "user",
-                password: null,
-              },
-            });
-          }
+          if (!user.email) return false;
+          await getDb().insert(users).values({
+            email: user.email,
+            role: "user",
+            password: null,
+          }).onConflictDoNothing({ target: users.email });
           return true;
         } catch (error) {
           console.error("Error in signIn callback:", error);
