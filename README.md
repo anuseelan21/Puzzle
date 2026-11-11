@@ -111,80 +111,17 @@ We have applied this method by examining the code after each new added functiona
 
 [https://www.youtube.com/watch?v=Ry0aOMws0gE](https://www.youtube.com/watch?v=Ry0aOMws0gE)
 
-<h3>Starting MySQL on Windows</h3>
-<p>If MySQL is not configured as a Windows service, start it in a separate PowerShell window and keep that window open while using the app:</p>
+<h2>Database and local development</h2>
 
-```powershell
-$mysqlHome = "C:\Program Files\MySQL\MySQL Server 8.4"
-& "$mysqlHome\bin\mysqld.exe" --console "--basedir=$mysqlHome" "--datadir=$env:LOCALAPPDATA\Singitronic\mysql-data" --port=3306 --bind-address=127.0.0.1 --mysqlx=0
-```
+The application uses Netlify Database (managed Postgres). Registration and login use Drizzle. Existing catalog controllers use a Prisma compatibility client connected to the same managed database.
 
-<h2>Instructions</h2>
-<ol>
-  <li><p>To run the app you first need to download and install Node.js and npm on your computer. Here is a link to the tutorial that explains how to install them: <a href="https://www.youtube.com/watch?v=4FAtFwKVhn0" target="_blank">https://www.youtube.com/watch?v=4FAtFwKVhn0</a>. Also here is the link where you can download them: <a href="https://nodejs.org/en" target="_blank">https://nodejs.org/en</a></p></li>
-  <li><p>When you install Node.js and npm on your computer you need to download and install MySQL on your computer. Here is another link to the tutorial which explains how you can download and install MySQL on your computer: <a target="_blank" href="https://www.youtube.com/watch?v=BxdSUGBs0gM&t=212s">https://www.youtube.com/watch?v=BxdSUGBs0gM&t=212s</a>. Here is a link where you can download MySQL: <a href="https://dev.mysql.com/downloads/installer/" target="_blank">https://dev.mysql.com/downloads/installer/</a></p></li>
-  <li><p>This step is optional, but highly recommended if you don't have a database management app. Because HeidiSQL is beginner-friendly and very easy to use than other database management options. Here is a link to the tutorial which explains how to download and install HeidiSQL: <a href="https://www.youtube.com/watch?v=oJ24MyLeiPs" target="_blank">https://www.youtube.com/watch?v=oJ24MyLeiPs</a> and here is a link where you can download it: <a href="https://www.heidisql.com" target="_blank">https://www.heidisql.com</a></p></li>
-  <li><p>When you install all the programs you need on your computer you need to download the project. When you download the project, you need to extract it.</p></li>
-  <li><p>After you extract the project you need to open the project folder in your code editor and in the root create a file with the name .env.</p></li>
-  <li><p>You need to put the following code in the .env file and instead of username and password put your MySQL username and password:</p></li>
-</ol>
+Install dependencies from the repository root with `npm install`, and generate the compatibility client with `npm run db:generate`. Install the Express backend dependencies in `server` if running that backend locally.
 
-```
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
-NODE_ENV=development
-DATABASE_URL="mysql://username:password@localhost:3306/singitronic_nextjs?sslmode=disabled"
-NEXTAUTH_SECRET=12D16C923BA17672F89B18C1DB22A
-NEXTAUTH_URL=http://localhost:3000
-```
+Use Netlify CLI for local development: `netlify dev --port 8889`. Netlify supplies the managed database connection; do not add a MySQL connection string or commit database credentials. Authentication also needs `NEXTAUTH_SECRET` and `NEXTAUTH_URL` configured securely. The existing standalone catalog backend uses `NEXT_PUBLIC_API_BASE_URL` for its browser API address.
 
-<p>7. After you do it, you need to create another .env file in the server folder and put the same DATABASE_URL you used in the previous .env file:</p>
+Define schema changes in `db/schema.ts`, then run `npm run db:migration -- --name describe_change`. Commit the generated files under `netlify/database/migrations/`. Netlify applies migrations during deployment. Do not run Prisma migration or push commands against the managed database; the Prisma schemas only describe the compatibility client.
 
-```
-NODE_ENV=development
-DATABASE_URL="mysql://username:password@localhost:3306/singitronic_nextjs?sslmode=disabled"
-```
-
-<p>8. Now you need to open your terminal of choice in the root folder of the project and write:</p>
-
-
-```
-npm install
-```
-
-<p>9. Now you need to navigate with the terminal in the server folder and install everything:</p>
-
-```
-cd server
-npm install
-```
-
-<p>10. You will need to run the Prisma migration now. Make sure you are in the server folder and write:</p>
-
-```
-npx prisma migrate dev
-```
-
-<p>11. Populate the local demo database with the Piece &amp; Parcel puzzle catalog. Run this from the server folder. The script can be re-run safely; it updates the 12 starter demo products, keeps their IDs and any existing order references, and removes only unused starter electronics categories. Do not use it to seed a database where IDs 1-12 belong to real products.</p>
-
-```
-node utills/insertDemoData.js
-```
-
-<p>12. Start the backend from the server folder:</p>
-
-```
-npm start
-```
-
-<p>13. While your backend is running you need to open another terminal(don't stop the backend). In the second terminal, you need to make sure you are in your root project folder and write the following:</p>
-
-```
-npm run dev
-```
-
-<p>14. Open <a href="http://localhost:3000" target="_blank">http://localhost:3000</a> and see it live!</p>
-
-
+The initial migration creates an empty database. Existing MySQL records are not imported. Importing historical users, catalog items, and orders requires a separate data transfer with foreign keys preserved.
 
 <h2>Project screenshots</h2>
 

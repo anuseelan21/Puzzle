@@ -1,4 +1,6 @@
-import prisma from "@/utils/db";
+import { getDb } from "@/db";
+import { user } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
@@ -28,9 +30,8 @@ export const POST = async (request: Request) => {
 
     const { email, password } = validationResult.data;
 
-    const existingUser = await prisma.user.findFirst({ 
-      where: { email } 
-    });
+    const db = getDb();
+    const [existingUser] = await db.select().from(user).where(eq(user.email, email)).limit(1);
 
     if (existingUser) {
       throw new AppError("Email is already in use", 400);
@@ -39,14 +40,16 @@ export const POST = async (request: Request) => {
     const hashedPassword = await bcrypt.hash(password, 14);
 
     // Create user with proper error handling
-    const newUser = await prisma.user.create({
-      data: {
+    const [newUser] = await db.insert(user).values({
         id: nanoid(),
         email,
         password: hashedPassword,
         role: "user",
-      },
-    });
+    }).onConflictDoNothing({ target: user.email }).returning({ id: user.id });
+
+    if (!newUser) {
+      throw new AppError("Email is already in use", 400);
+    }
 
     // Return success response without sensitive data
     return new NextResponse(

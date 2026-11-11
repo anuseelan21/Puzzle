@@ -9,34 +9,34 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("NETLIFY_DB_URL")
 }
 
 model Product {
   id             String                   @id @default(uuid())
   slug           String                   @unique
   title          String
-  mainImage      String
+  mainImage      String @map("main_image")
   price          Int                      @default(0)
   rating         Int                      @default(0)
   description    String
   manufacturer   String
-  inStock        Int                      @default(1)
-  categoryId     String
+  inStock        Int                      @default(1) @map("in_stock")
+  categoryId     String @map("category_id")
   category       Category                 @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   customerOrders customer_order_product[]
   Wishlist       Wishlist[]
 
-  merchantId     String
+  merchantId     String @map("merchant_id")
   merchant       Merchant @relation(fields: [merchantId], references: [id])
   // Back relation for bulk upload items
   bulkUploadItems bulk_upload_item[]      @relation("ProductBulkItems")
 }
 
 model Image {
-  imageID   String @id @default(uuid())
-  productID String
+  imageID   String @id @default(uuid()) @map("image_id")
+  productID String @map("product_id")
   image     String
 }
 
@@ -60,12 +60,12 @@ model Customer_order {
   company     String
   adress      String
   apartment   String
-  postalCode  String
-  dateTime    DateTime?                @default(now())
+  postalCode  String @map("postal_code")
+  dateTime    DateTime?                @default(now()) @map("date_time")
   status      String
   city        String
   country     String
-  orderNotice String?
+  orderNotice String? @map("order_notice")
   total       Int
   products    customer_order_product[]
 }
@@ -73,9 +73,9 @@ model Customer_order {
 model customer_order_product {
   id              String         @id @default(uuid())
   customerOrder   Customer_order @relation(fields: [customerOrderId], references: [id])
-  customerOrderId String
+  customerOrderId String @map("customer_order_id")
   product         Product        @relation(fields: [productId], references: [id])
-  productId       String
+  productId       String @map("product_id")
   quantity        Int
 }
 
@@ -88,9 +88,9 @@ model Category {
 model Wishlist {
   id        String  @id @default(uuid())
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId String
+  productId String @map("product_id")
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
+  userId    String @map("user_id")
 }
 
 enum NotificationType {
@@ -98,6 +98,7 @@ enum NotificationType {
   PAYMENT_STATUS
   PROMOTION
   SYSTEM_ALERT
+  @@map("notification_type")
 }
 
 enum NotificationPriority {
@@ -105,20 +106,21 @@ enum NotificationPriority {
   NORMAL
   HIGH
   URGENT
+  @@map("notification_priority")
 }
 
 model Notification {
   id        String               @id @default(uuid())
-  userId    String
+  userId    String @map("user_id")
   user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   message   String               @db.Text
   type      NotificationType
-  isRead    Boolean              @default(false)
+  isRead    Boolean              @default(false) @map("is_read")
   priority  NotificationPriority @default(NORMAL)
   metadata  Json?
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([userId, isRead])
@@ -133,8 +135,8 @@ model Merchant {
   phone       String?
   address     String?
   status      String   @default("ACTIVE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // relasi
   products Product[]
@@ -142,25 +144,25 @@ model Merchant {
 
 model bulk_upload_batch {
   id         String              @id @default(uuid())
-  fileName   String?
-  createdAt  DateTime            @default(now())
+  fileName   String? @map("file_name")
+  createdAt  DateTime            @default(now()) @map("created_at")
   status     BulkUploadStatus    @default(PENDING)
-  itemCount  Int                 @default(0)
-  errorCount Int                 @default(0)
+  itemCount  Int                 @default(0) @map("item_count")
+  errorCount Int                 @default(0) @map("error_count")
   items      bulk_upload_item[]
 
   // optional uploader link if you later associate sessions/users
-  userId String?
+  userId String? @map("user_id")
   user   User?                  @relation(name: "UserBatches", fields: [userId], references: [id])
 }
 
 model bulk_upload_item {
   id        String            @id @default(uuid())
-  batchId   String
+  batchId   String @map("batch_id")
   batch     bulk_upload_batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
   // created product reference
-  productId String?
+  productId String? @map("product_id")
   product   Product?          @relation(name: "ProductBulkItems", fields: [productId], references: [id], onDelete: SetNull)
 
   // snapshot fields for auditing and re-commit edits
@@ -169,9 +171,9 @@ model bulk_upload_item {
   price         Int
   manufacturer  String?
   description   String?
-  mainImage     String?
-  categoryId    String
-  inStock       Int
+  mainImage     String? @map("main_image")
+  categoryId    String @map("category_id")
+  inStock       Int @map("in_stock")
 
   status        BulkUploadItemStatus @default(CREATED)
   error         String?
@@ -182,10 +184,12 @@ enum BulkUploadStatus {
   COMPLETED
   PARTIAL
   FAILED
+  @@map("bulk_upload_status")
 }
 
 enum BulkUploadItemStatus {
   CREATED
   UPDATED
   ERROR
+  @@map("bulk_upload_item_status")
 }
