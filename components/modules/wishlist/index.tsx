@@ -2,7 +2,6 @@
 import { useWishlistStore } from "@/app/_zustand/wishlistStore";
 import WishItem from "@/components/WishItem";
 import apiClient from "@/lib/api";
-import { nanoid } from "nanoid";
 import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 
@@ -58,7 +57,7 @@ export const WishlistModule = () => {
             <table className="table text-center">
               <thead>
                 <tr>
-                  <th></th>
+                  <th>#</th>
                   <th className="text-accent-content">Image</th>
                   <th className="text-accent-content">Name</th>
                   <th className="text-accent-content">Stock Status</th>
@@ -67,15 +66,15 @@ export const WishlistModule = () => {
               </thead>
               <tbody>
                 {wishlist &&
-                  wishlist?.map((item) => (
+                  wishlist?.map((item, index) => (
                     <WishItem
-                      id={item?.id}
+                      rowNumber={index + 1}
                       title={item?.title}
                       price={item?.price}
                       image={item?.image}
                       slug={item?.slug}
                       stockAvailabillity={item?.stockAvailabillity}
-                      key={nanoid()}
+                      key={item.id}
                     />
                   ))}
               </tbody>
